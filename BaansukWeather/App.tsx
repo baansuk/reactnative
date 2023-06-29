@@ -1,24 +1,58 @@
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Vibration, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
+
+const { width:SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function App() {
-  return (
+  const [day, setDay] = useState();
+  const [city, setCity] = useState();
+  const [district, setDistrict] = useState();
+  const [ok, setOk] = useState(true);
+  const getWeather = async() => {
+    const { granted } = await Location.requestForegroundPermissionsAsync();
+    if(!granted) {
+      setOk(false);
+    }
+    const {coords:{latitude, longitude}} = await Location.getCurrentPositionAsync({ accuracy: 5 });
+    const location = await Location.reverseGeocodeAsync({latitude, longitude}, {useGoogleMaps: false});
+    setCity(location[0].city);
+    setDistrict(location[0].district);
+    const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&appid=5fb68538c2c3f380eba0909bc9d31e91`)
+    const json = await response.json();
+    setDay(json.daily);
+    console.log(json);
+  };
+
+  useEffect(()=> {
+    getWeather();
+  },[]);
+
+  return ( 
     <View style={styles.container}>
+
+      <View style={styles.city}>
+        {city ? <Text style={styles.cityName}>{city}</Text> :
+         <ActivityIndicator size='large' color='black'/>       
+        }
+        <Text style={styles.districtName}>{district}</Text>
+      </View>
+      <ScrollView showsHorizontalScrollIndicator={false} pagingEnabled horizontal contentContainerStyle={styles.weather}>
+        {day.length === 0 ? (
+          <ActivityIndicator size='large' color='black'/> 
+        ): day.map((d, idx) => {
+            <View style={styles.day}>
+              <Text style={styles.temp}>{d.temp.day}</Text>
+              <Text style={styles.description}>{d.weather[0].main}</Text>
+            </View>
+          }
+
+        )}
+
+      </ScrollView>
+
       <StatusBar style="auto" />
-      <TextInput
-      style={styles.input}
-      placeholder="이름을 입력해주세요."
-      placeholderTextColor="#9f9f9f"
-    />
-    <Text style={styles.text}>
-      동해물과 백두산이 마르고 닳도록 하느님이 보우하사 우리 나라 만세 무궁화 삼천리 화려강산 대한사람 대한으로 길이 보전하세. 남산 위에 저 소나무 철갑을 두른 듯 바람서리 불변함은 우리 기상일세 무궁화 삼천리 화려강산 대한사람 대한으로 길이 보전하세. 가을 하늘 공활한데 높고 구름 없이 
-    </Text>
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>로그인</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button2}>
-        <Text style={styles.button2Text}>회원가입</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -26,60 +60,42 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'coral',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
   },
-  text: {
-    fontSize: 16,
-    lineHeight: 25
+  city: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 50,
+    flex:1,
+    borderBottomWidth: 3,
+    margin: 20,
+    width: '100%'
   },
-  text2: {
-    margin: 5,
-    fontSize: 20
+
+  cityName: {
+    fontSize: 50,
+    fontWeight: '900'
   },
-  button: {
-    margin: 10,
-    backgroundColor: '#73BBFB',
-    borderRadius: 15,
-    padding: 10,
-    width: '100%', // 원하는 가로 크기
-    height: 52, // 원하는 세로 크기
-    justifyContent: 'center',
-    alignItems: 'center'
+  districtName: {
+    fontSize: 30,
+    fontWeight: '600',
+    marginTop: 15
   },
-  buttonText: {
-    fontSize: 18,
-    color: 'white',
-    textAlign: 'center',
+  weather: {
   },
-  button2: {
-    margin: 10,
-    backgroundColor: 'white',
-    borderColor: '#73BBFB',
-    borderWidth: 1,
-    borderRadius: 15,
-    padding: 10,
-    width: '100%',
-    height: 52, // 원하는 세로 크기
-    justifyContent: 'center',
-    alignItems: 'center'
+  day: {
+    width: SCREEN_WIDTH,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
-  button2Text: {
-    fontSize: 18,
-    color: '#73BBFB',
-    textAlign: 'center',
+  temp: {
+    fontWeight: '700',
+    fontSize: 130,
   },
-  input: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#73BBFB',
-    padding: 10,
-    margin: 10,
-    width: '100%',
-    height: 52,
-    fontSize: 18,
+  description: {
+    marginTop: -10,
+    fontSize: 40,
   },
 });
