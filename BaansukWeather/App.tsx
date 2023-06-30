@@ -2,56 +2,88 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import * as Location from 'expo-location';
+import { Fontisto } from "@expo/vector-icons";
 
-const { width:SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const icons: Record<string, string> = {
+  Clouds: "cloudy",
+  Clear: "day-sunny",
+  Atmosphere: "cloudy-gusts",
+  Snow: "snow",
+  Rain: "rains",
+  Drizzle: "rain",
+  Thunderstorm: "lightning",
+};
 
-export default function App() {
-  const [day, setDay] = useState();
-  const [city, setCity] = useState();
-  const [district, setDistrict] = useState();
-  const [ok, setOk] = useState(true);
-  const getWeather = async() => {
+interface WeatherData {
+  temp: { day: number };
+  weather: { main: string; description: string }[];
+}
+
+interface LocationData {
+  city: string;
+  district: string;
+}
+
+export default function App(): JSX.Element {
+  const [day, setDay] = useState<WeatherData[]>([]);
+  const [city, setCity] = useState<string | undefined>();
+  const [district, setDistrict] = useState<string | undefined>();
+  const [ok, setOk] = useState<boolean>(true);
+
+  const getWeather = async (): Promise<void> => {
     const { granted } = await Location.requestForegroundPermissionsAsync();
-    if(!granted) {
+    if (!granted) {
       setOk(false);
     }
-    const {coords:{latitude, longitude}} = await Location.getCurrentPositionAsync({ accuracy: 5 });
-    const location = await Location.reverseGeocodeAsync({latitude, longitude}, {useGoogleMaps: false});
-    setCity(location[0].city);
-    setDistrict(location[0].district);
-    const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&appid=5fb68538c2c3f380eba0909bc9d31e91`)
+
+    const { coords: { latitude, longitude } } = await Location.getCurrentPositionAsync({ accuracy: 5 });
+    const location = await Location.reverseGeocodeAsync({ latitude, longitude }, { useGoogleMaps: false });
+    setCity(location[0]?.city);
+    setDistrict(location[0]?.district);
+
+    const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&appid=5fb68538c2c3f380eba0909bc9d31e91&units=metric`);
     const json = await response.json();
-    setDay(json.daily);
-    console.log(json);
+    setDay(json?.daily);
   };
 
-  useEffect(()=> {
+  useEffect(() => {
     getWeather();
-  },[]);
+  }, []);
 
-  return ( 
+  return (
     <View style={styles.container}>
-
       <View style={styles.city}>
-        {city ? <Text style={styles.cityName}>{city}</Text> :
-         <ActivityIndicator size='large' color='black'/>       
-        }
+        {city ? (
+          <Text style={styles.cityName}>{city}</Text>
+        ) : (
+          <ActivityIndicator size='large' color='black' />
+        )}
         <Text style={styles.districtName}>{district}</Text>
       </View>
-      <ScrollView showsHorizontalScrollIndicator={false} pagingEnabled horizontal contentContainerStyle={styles.weather}>
+      <ScrollView
+        showsHorizontalScrollIndicator={false}
+        pagingEnabled
+        horizontal
+        contentContainerStyle={styles.weather}
+      >
         {day.length === 0 ? (
-          <ActivityIndicator size='large' color='black'/> 
-        ): day.map((d, idx) => {
-            <View style={styles.day}>
-              <Text style={styles.temp}>{d.temp.day}</Text>
-              <Text style={styles.description}>{d.weather[0].main}</Text>
+          <View style={styles.dayIndicator}>
+            <ActivityIndicator size='large' color='black' />
+          </View>
+        ) : (
+          day.map((d, idx) => (
+            <View style={styles.day} key={idx}>
+              <Text style={styles.temp}>{parseFloat(d.temp.day).toFixed(1)}º</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Fontisto name={icons[d.weather[0].main]} size={32} color="black" />
+                <Text style={styles.description}>{d.weather[0].main}</Text>
+              </View>
+              <Text style={styles.descriptionDetail}>{d.weather[0].description}</Text>
             </View>
-          }
-
+          ))
         )}
-
       </ScrollView>
-
       <StatusBar style="auto" />
     </View>
   );
@@ -65,37 +97,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   city: {
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    paddingBottom: 50,
-    flex:1,
+    paddingRight: 20,
+    paddingBottom: 20,
+    flex: 1,
     borderBottomWidth: 3,
-    margin: 20,
-    width: '100%'
+    margin: 10,
+    width: '100%',
   },
-
   cityName: {
     fontSize: 50,
-    fontWeight: '900'
+    fontWeight: '900',
   },
   districtName: {
     fontSize: 30,
     fontWeight: '600',
-    marginTop: 15
+    marginTop: 10,
   },
-  weather: {
-  },
+  weather: {},
   day: {
     width: SCREEN_WIDTH,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingLeft: 20,
+  },
+  dayIndicator: {
+    width: SCREEN_WIDTH,
+    marginTop: 30,
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
   temp: {
     fontWeight: '700',
-    fontSize: 130,
+    fontSize: 100,
   },
   description: {
     marginTop: -10,
+    paddingLeft: 10,
     fontSize: 40,
+  },
+  descriptionDetail: {
+    fontSize: 20,
   },
 });
