@@ -15,6 +15,16 @@ const icons: Record<string, string> = {
   Thunderstorm: "lightning",
 };
 
+const backgrounds: Record<string, string> = {
+  Clouds: "#91B8BA",
+  Clear: "#48CBFF",
+  Atmosphere: "#48CBFF",
+  Snow: "#E1F7FF",
+  Rain: "#6CA9C1",
+  Drizzle: "#AFD0DD",
+  Thunderstorm: "#6DA8A8",
+};
+
 interface WeatherData {
   temp: { day: number };
   weather: { main: string; description: string }[];
@@ -26,10 +36,12 @@ interface LocationData {
 }
 
 export default function App(): JSX.Element {
+  const [weather, setWeather] = useState<String>();
   const [day, setDay] = useState<WeatherData[]>([]);
   const [city, setCity] = useState<string | undefined>();
   const [district, setDistrict] = useState<string | undefined>();
   const [ok, setOk] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState<number>(0);
 
   const getWeather = async (): Promise<void> => {
     const { granted } = await Location.requestForegroundPermissionsAsync();
@@ -51,6 +63,12 @@ export default function App(): JSX.Element {
     getWeather();
   }, []);
 
+  const handleScroll = (event: any) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    const pageIndex = Math.floor(contentOffset.x / layoutMeasurement.width);
+    setCurrentPage(pageIndex);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.city}>
@@ -66,6 +84,7 @@ export default function App(): JSX.Element {
         pagingEnabled
         horizontal
         contentContainerStyle={styles.weather}
+        onScroll={handleScroll}
       >
         {day.length === 0 ? (
           <View style={styles.dayIndicator}>
